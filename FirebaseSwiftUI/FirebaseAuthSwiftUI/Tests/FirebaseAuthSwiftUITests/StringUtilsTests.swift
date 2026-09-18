@@ -42,6 +42,15 @@ import Testing
     "En continuant, tu indiques que tu acceptes nos %@ et notre %@.")
 }
 
+@Test func stringUtilsConfiguredLanguageMissingFromCustomBundleUsesPackageTranslation() throws {
+  let customBundle = try #require(createTestBundleWithStringsFile())
+  #expect(customBundle.path(forResource: "fr", ofType: "lproj") == nil)
+  let stringUtils = StringUtils(bundle: customBundle, languageCode: "fr")
+
+  #expect(stringUtils.termsOfServiceMessage ==
+    "En continuant, tu indiques que tu acceptes nos %@ et notre %@.")
+}
+
 @Test func testStringUtilsUnknownKeyRemainsUnchanged() {
   let packageBundle = StringUtils(bundle: Bundle.main).fallbackBundle
   let stringUtils = StringUtils(bundle: packageBundle, languageCode: "en-GB")

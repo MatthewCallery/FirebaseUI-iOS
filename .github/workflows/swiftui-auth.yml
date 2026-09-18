@@ -69,6 +69,17 @@ jobs:
             -enableCodeCoverage YES \
             -resultBundlePath FirebaseSwiftUIPackageTests.xcresult | tee FirebaseSwiftUIPackageTests.log | xcpretty --test --color --simple
             
+      - name: Check configured language fallback with French device preferences
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -scheme FirebaseUI-Package \
+            -destination "id=${{ steps.prepare-simulator.outputs.udid }}" \
+            -testLanguage fr -testRegion FR \
+            -only-testing:'FirebaseAuthSwiftUITests/testStringUtilsMissingRegionalTranslationFallsBackToEnglish()' \
+            -only-testing:'FirebaseAuthSwiftUITests/stringUtilsConfiguredLanguageMissingFromCustomBundleUsesPackageTranslation()' \
+            | tee -a FirebaseSwiftUIPackageTests.log | xcpretty --test --color --simple
+
       - name: Upload test logs
         if: failure()
         uses: actions/upload-artifact@v4
