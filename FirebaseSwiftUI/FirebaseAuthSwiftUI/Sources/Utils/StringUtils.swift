@@ -45,11 +45,14 @@ public class StringUtils {
       // Fall back to fallback bundle with same language
       if let fallbackPath = fallbackBundle.path(forResource: languageCode, ofType: "lproj"),
          let fallbackLocalizedBundle = Bundle(path: fallbackPath) {
-        return fallbackLocalizedBundle.localizedString(
+        let fallbackString = fallbackLocalizedBundle.localizedString(
           forKey: key,
           value: nil,
           table: "Localizable"
         )
+        if fallbackString != key {
+          return fallbackString
+        }
       }
     }
 
@@ -63,7 +66,17 @@ public class StringUtils {
     }
 
     // Fall back to the package's default strings
-    return String(localized: keyLocale, bundle: fallbackBundle)
+    let fallbackString = String(localized: keyLocale, bundle: fallbackBundle)
+    if fallbackString != key {
+      return fallbackString
+    }
+
+    // Regional catalogs can omit keys that exist in the source language.
+    guard let path = fallbackBundle.path(forResource: "en", ofType: "lproj"),
+          let englishBundle = Bundle(path: path) else {
+      return key
+    }
+    return englishBundle.localizedString(forKey: key, value: nil, table: "Localizable")
   }
 
   public func localizedErrorMessage(for error: Error) -> String {
