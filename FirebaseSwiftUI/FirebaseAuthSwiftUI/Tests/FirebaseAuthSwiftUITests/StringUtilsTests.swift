@@ -17,6 +17,47 @@ import FirebaseAuth
 import Foundation
 import Testing
 
+@Test func testStringUtilsMissingPreferredTranslationFallsBackToEnglish() {
+  let packageBundle = StringUtils(bundle: Bundle.main).fallbackBundle
+  let stringUtils = StringUtils(bundle: packageBundle)
+
+  #expect(stringUtils.termsOfServiceMessage ==
+    "By continuing, you are indicating that you accept our %@ and %@.")
+}
+
+@Test func testStringUtilsMissingRegionalTranslationFallsBackToEnglish() {
+  let packageBundle = StringUtils(bundle: Bundle.main).fallbackBundle
+  let stringUtils = StringUtils(bundle: packageBundle, languageCode: "en-GB")
+
+  #expect(stringUtils.termsOfServiceMessage ==
+    "By continuing, you are indicating that you accept our %@ and %@.")
+  #expect(stringUtils.termsOfServiceLabel == "Terms of Service")
+}
+
+@Test func testStringUtilsPreservesAvailableTranslation() {
+  let packageBundle = StringUtils(bundle: Bundle.main).fallbackBundle
+  let stringUtils = StringUtils(bundle: packageBundle, languageCode: "fr")
+
+  #expect(stringUtils.termsOfServiceMessage ==
+    "En continuant, tu indiques que tu acceptes nos %@ et notre %@.")
+}
+
+@Test func stringUtilsConfiguredLanguageMissingFromCustomBundleUsesPackageTranslation() throws {
+  let customBundle = try #require(createTestBundleWithStringsFile())
+  #expect(customBundle.path(forResource: "fr", ofType: "lproj") == nil)
+  let stringUtils = StringUtils(bundle: customBundle, languageCode: "fr")
+
+  #expect(stringUtils.termsOfServiceMessage ==
+    "En continuant, tu indiques que tu acceptes nos %@ et notre %@.")
+}
+
+@Test func testStringUtilsUnknownKeyRemainsUnchanged() {
+  let packageBundle = StringUtils(bundle: Bundle.main).fallbackBundle
+  let stringUtils = StringUtils(bundle: packageBundle, languageCode: "en-GB")
+
+  #expect(stringUtils.localizedString(for: "MissingTestTranslation") == "MissingTestTranslation")
+}
+
 @Test func testStringUtilsDefaultBundle() async throws {
   // Test that StringUtils works with default bundle (no fallback)
   let stringUtils = StringUtils(bundle: Bundle.module)

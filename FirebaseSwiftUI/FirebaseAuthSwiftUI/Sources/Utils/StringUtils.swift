@@ -29,41 +29,51 @@ public class StringUtils {
   }
 
   public func localizedString(for key: String) -> String {
-    // If a specific language code is set, load strings from that language bundle
-    if let languageCode, let path = bundle.path(forResource: languageCode, ofType: "lproj"),
-       let localizedBundle = Bundle(path: path) {
-      let localizedString = localizedBundle.localizedString(
-        forKey: key,
-        value: nil,
-        table: "Localizable"
-      )
-      // If string was found in custom bundle, return it
-      if localizedString != key {
-        return localizedString
-      }
-
-      // Fall back to fallback bundle with same language
-      if let fallbackPath = fallbackBundle.path(forResource: languageCode, ofType: "lproj"),
-         let fallbackLocalizedBundle = Bundle(path: fallbackPath) {
-        return fallbackLocalizedBundle.localizedString(
+    if let languageCode {
+      // Respect the configured language in both custom and package strings.
+      if let path = bundle.path(forResource: languageCode, ofType: "lproj"),
+         let localizedBundle = Bundle(path: path) {
+        let localizedString = localizedBundle.localizedString(
           forKey: key,
           value: nil,
           table: "Localizable"
         )
+        if localizedString != key {
+          return localizedString
+        }
+      }
+
+      if let fallbackPath = fallbackBundle.path(forResource: languageCode, ofType: "lproj"),
+         let fallbackLocalizedBundle = Bundle(path: fallbackPath) {
+        let fallbackString = fallbackLocalizedBundle.localizedString(
+          forKey: key,
+          value: nil,
+          table: "Localizable"
+        )
+        if fallbackString != key {
+          return fallbackString
+        }
+      }
+    } else {
+      // Only use device preferences when no language was explicitly configured.
+      let keyLocale = String.LocalizationValue(key)
+      let localizedString = String(localized: keyLocale, bundle: bundle)
+      if localizedString != key {
+        return localizedString
+      }
+
+      let fallbackString = String(localized: keyLocale, bundle: fallbackBundle)
+      if fallbackString != key {
+        return fallbackString
       }
     }
 
-    // Try default localization from custom bundle
-    let keyLocale = String.LocalizationValue(key)
-    let localizedString = String(localized: keyLocale, bundle: bundle)
-
-    // If the string was found in custom bundle (not just the key returned), use it
-    if localizedString != key {
-      return localizedString
+    // Regional catalogs can omit keys that exist in the source language.
+    guard let path = fallbackBundle.path(forResource: "en", ofType: "lproj"),
+          let englishBundle = Bundle(path: path) else {
+      return key
     }
-
-    // Fall back to the package's default strings
-    return String(localized: keyLocale, bundle: fallbackBundle)
+    return englishBundle.localizedString(forKey: key, value: nil, table: "Localizable")
   }
 
   public func localizedErrorMessage(for error: Error) -> String {
