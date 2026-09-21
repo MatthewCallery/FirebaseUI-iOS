@@ -263,7 +263,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				4600E5502DD777BE00EED5F3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
-				7EBF264B2EBE10DB000F0BB3 /* XCLocalSwiftPackageReference "../../../FirebaseUI-iOS" */,
+				7EBF264B2EBE10DB000F0BB3 /* XCLocalSwiftPackageReference "../.." */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 46F89C092D64A86C000F8BC0 /* Products */;
@@ -639,9 +639,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		7EBF264B2EBE10DB000F0BB3 /* XCLocalSwiftPackageReference "../../../FirebaseUI-iOS" */ = {
+		7EBF264B2EBE10DB000F0BB3 /* XCLocalSwiftPackageReference "../.." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../FirebaseUI-iOS";
+				relativePath = ../..;
 		};
 /* End XCLocalSwiftPackageReference section */
 

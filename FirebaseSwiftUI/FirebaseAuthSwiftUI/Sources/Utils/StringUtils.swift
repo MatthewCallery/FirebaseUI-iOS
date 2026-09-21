@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import AuthenticationServices
 import FirebaseAuth
 import SwiftUI
 
@@ -77,6 +78,12 @@ public class StringUtils {
   }
 
   public func localizedErrorMessage(for error: Error) -> String {
+    if case let AuthServiceError.signInFailed(underlying) = error,
+       (underlying as NSError).domain == ASAuthorizationError.errorDomain {
+      return localizedString(
+        for: "Unable to sign in with Apple. Try again or use another sign-in method."
+      )
+    }
     let authError = error as NSError
     let errorCode = AuthErrorCode(rawValue: authError.code)
     switch errorCode {

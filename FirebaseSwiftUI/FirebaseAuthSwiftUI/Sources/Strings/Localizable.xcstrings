@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Unable to sign in with Apple. Try again or use another sign-in method." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to sign in with Apple. Try again or use another sign-in method."
+          }
+        }
+      }
+    },
     "%@" : {
       "localizations" : {
         "ar" : {
