@@ -264,4 +264,29 @@ final class FirebaseSwiftUIExampleUITests: XCTestCase {
       "SignedInView should be visible after user creation"
     )
   }
+
+  @MainActor
+  func testDuplicateEmailSignupDisplaysError() async throws {
+    let email = createEmail()
+    let password = "qwerty321@"
+    try await createTestUser(email: email, password: password)
+    let app = createTestApp()
+    app.launch()
+
+    let switchFlow = app.buttons["switch-auth-flow"]
+    XCTAssertTrue(switchFlow.waitForExistence(timeout: 6))
+    switchFlow.tap()
+    try enterText(email, into: app.textFields["email-field"], app: app)
+    try enterText(password, into: app.secureTextFields["password-field"], app: app)
+    try enterText(password, into: app.secureTextFields["confirm-password-field"], app: app)
+    let signUp = app.buttons["sign-in-button"]
+    XCTAssertTrue(waitForElementToBecomeEnabled(signUp, timeout: 5))
+    signUp.tap()
+
+    let alert = app.alerts.firstMatch
+    XCTAssertTrue(alert.waitForExistence(timeout: 10), "Duplicate signup must explain the failure")
+    XCTAssertFalse(app.staticTexts["signed-in-text"].exists)
+    alert.buttons["OK"].tap()
+    XCTAssertTrue(switchFlow.exists, "The user must be able to switch to login after the error")
+  }
 }

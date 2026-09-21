@@ -13,8 +13,20 @@
 // limitations under the License.
 
 @testable import FirebaseGoogleSwiftUI
+import GoogleSignIn
 import Testing
 
-@Test func example() async throws {
-  // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+@Test func googleCancellationUsesTheSharedSilentCancellationPath() {
+  let error = NSError(domain: kGIDSignInErrorDomain, code: GIDSignInError.canceled.rawValue)
+  #expect(GoogleProviderSwift.authenticationError(error) is CancellationError)
+}
+
+@Test func googleSignInPreservesOtherErrors() {
+  let errors = [
+    NSError(domain: kGIDSignInErrorDomain, code: GIDSignInError.keychain.rawValue),
+    NSError(domain: "OtherProvider", code: GIDSignInError.canceled.rawValue),
+  ]
+  for error in errors {
+    #expect(GoogleProviderSwift.authenticationError(error) as NSError === error)
+  }
 }

@@ -55,103 +55,29 @@ func createEmail() -> String {
   return (field.value as? String) == expectedText
 }
 
-@MainActor private func showPasteMenu(for field: XCUIElement,
-                                      text: String,
-                                      app: XCUIApplication) throws -> XCUIElement {
+/// Enters and verifies text without depending on the simulator's shared clipboard.
+@MainActor func enterText(_ text: String, into field: XCUIElement, app: XCUIApplication) throws {
+  let identifier = field.identifier
   field.tap()
-
-  // Give field time to become first responder.
-  usleep(200_000) // 0.2 seconds
-
-  // Press and hold to bring up paste menu.
-  field.press(forDuration: 1.5)
-
-  let pasteMenuItem = app.menuItems["Paste"]
-
-  // Fallback to double-tap if the context menu did not appear.
-  if !pasteMenuItem.waitForExistence(timeout: 3) {
-    field.doubleTap()
-    usleep(300_000) // 0.3 seconds
-
-    if !pasteMenuItem.waitForExistence(timeout: 2) {
-      throw NSError(
-        domain: "TestError",
-        code: 1,
-        userInfo: [
-          NSLocalizedDescriptionKey: "Failed to show paste menu for field. Text was: \(text)",
-        ]
-      )
-    }
+  let input: XCUIElement
+  if field.elementType == .secureTextField {
+    // Reveal passwords so automation can enter and verify their exact values.
+    field.typeText("x")
+    app.buttons[identifier].tap()
+    input = app.textFields[identifier]
+    input.tap()
+    input.typeText(XCUIKeyboardKey.delete.rawValue + text)
+  } else {
+    input = field
+    input.typeText(text)
   }
 
-  return pasteMenuItem
-}
-
-@MainActor private func typeIntoField(_ field: XCUIElement,
-                                      text: String,
-                                      app: XCUIApplication) throws {
-  UIPasteboard.general.string = text
-  let pasteMenuItem = try showPasteMenu(for: field, text: text, app: app)
-  pasteMenuItem.tap()
-
-  let success = waitForFieldValue(field, expectedText: text, timeout: 3)
-  UIPasteboard.general.string = nil
-
-  guard success else {
+  guard waitForFieldValue(input, expectedText: text, timeout: 3) else {
     throw NSError(
       domain: "TestError",
       code: 2,
-      userInfo: [
-        NSLocalizedDescriptionKey: "Failed to type expected text into field. Text was: \(text)",
-      ]
+      userInfo: [NSLocalizedDescriptionKey: "Failed to enter text in \(identifier)"]
     )
-  }
-}
-
-@MainActor private func pasteIntoSecureField(_ field: XCUIElement,
-                                             text: String,
-                                             app: XCUIApplication) throws {
-  let originalValue = field.value as? String
-  UIPasteboard.general.string = text
-  let pasteMenuItem = try showPasteMenu(for: field, text: text, app: app)
-  pasteMenuItem.tap()
-
-  // Poll until the value changes rather than relying on a fixed sleep.
-  // Secure fields show bullet characters so we can only detect a change, not the exact value.
-  let deadline = Date().addingTimeInterval(3.0)
-  var pasted = false
-  while Date() < deadline {
-    if (field.value as? String) != originalValue {
-      pasted = true
-      break
-    }
-    RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-  }
-
-  UIPasteboard.general.string = nil
-
-  guard pasted else {
-    throw NSError(
-      domain: "TestError",
-      code: 3,
-      userInfo: [
-        NSLocalizedDescriptionKey: "Failed to paste expected text into secure field. Text was: \(text)",
-      ]
-    )
-  }
-}
-
-/// Enters text into a UI test field.
-/// - Parameters:
-///   - field: The XCUIElement representing the text field
-///   - text: The text to enter
-///   - app: The XCUIApplication instance
-@MainActor func enterText(_ text: String, into field: XCUIElement, app: XCUIApplication) throws {
-  switch field.elementType {
-  case .secureTextField:
-    try pasteIntoSecureField(field, text: text, app: app)
-  default:
-    try typeIntoField(field, text: text, app: app)
   }
 }
 

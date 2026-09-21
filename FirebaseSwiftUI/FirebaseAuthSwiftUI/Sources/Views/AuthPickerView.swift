@@ -68,7 +68,6 @@ extension AuthPickerView: View {
               }
             }
         }
-        .environment(\.reportError, reportError)
         .errorAlert(
           error: $error,
           okButtonLabel: authService.string.okButtonLabel
@@ -82,6 +81,7 @@ extension AuthPickerView: View {
         .accountConflictHandler()
         // Apply MFA handling at NavigationStack level
         .mfaHandler()
+        .environment(\.reportError, reportError)
         .environment(authService)
       }
   }

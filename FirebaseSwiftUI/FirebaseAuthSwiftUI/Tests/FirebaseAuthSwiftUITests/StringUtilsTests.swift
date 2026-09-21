@@ -12,10 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import AuthenticationServices
 import FirebaseAuth
 @testable import FirebaseAuthSwiftUI
 import Foundation
 import Testing
+
+@Test func appleAuthorizationFailureHidesSDKDetails() {
+  let strings = StringUtils(bundle: Bundle.module, languageCode: "en-GB")
+  let error = AuthServiceError.signInFailed(underlying: NSError(
+    domain: ASAuthorizationError.errorDomain,
+    code: ASAuthorizationError.unknown.rawValue
+  ))
+  #expect(strings.localizedErrorMessage(for: error) ==
+    "Unable to sign in with Apple. Try again or use another sign-in method.")
+}
+
+@Test func unrelatedSignInFailureKeepsItsExplanation() {
+  let strings = StringUtils(bundle: Bundle.module)
+  let error = AuthServiceError.signInFailed(underlying: NSError(
+    domain: "OtherProvider",
+    code: ASAuthorizationError.unknown.rawValue,
+    userInfo: [NSLocalizedDescriptionKey: "Network unavailable"]
+  ))
+  #expect(strings.localizedErrorMessage(for: error) == "Failed to sign in: Network unavailable")
+}
 
 @Test func testStringUtilsMissingPreferredTranslationFallsBackToEnglish() {
   let packageBundle = StringUtils(bundle: Bundle.main).fallbackBundle

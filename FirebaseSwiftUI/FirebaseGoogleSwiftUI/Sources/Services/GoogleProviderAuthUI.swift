@@ -50,7 +50,7 @@ public class GoogleProviderSwift: CredentialAuthProviderSwift {
         withPresenting: presentingViewController
       ) { result, error in
         if let error = error {
-          continuation.resume(throwing: error)
+          continuation.resume(throwing: Self.authenticationError(error))
           return
         }
 
@@ -67,6 +67,15 @@ public class GoogleProviderSwift: CredentialAuthProviderSwift {
         continuation.resume(returning: credential)
       }
     }
+  }
+
+  static func authenticationError(_ error: Error) -> Error {
+    let nsError = error as NSError
+    if nsError.domain == kGIDSignInErrorDomain,
+       nsError.code == GIDSignInError.canceled.rawValue {
+      return CancellationError()
+    }
+    return error
   }
 }
 
