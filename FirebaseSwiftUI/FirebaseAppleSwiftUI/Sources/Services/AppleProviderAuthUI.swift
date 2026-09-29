@@ -107,7 +107,7 @@ extension AuthenticateWithAppleDialog: ASAuthorizationControllerDelegate {
 
   func authorizationController(controller _: ASAuthorizationController,
                                didCompleteWithError error: Error) {
-    continuation?.resume(throwing: AuthServiceError.signInFailed(underlying: error))
+    continuation?.resume(throwing: AppleProviderSwift.authenticationError(error))
     continuation = nil
   }
 }
@@ -120,6 +120,15 @@ public class AppleProviderSwift: CredentialAuthProviderSwift {
 
   public init(scopes: [ASAuthorization.Scope] = [.fullName, .email]) {
     self.scopes = scopes
+  }
+
+  static func authenticationError(_ error: Error) -> Error {
+    let nsError = error as NSError
+    if nsError.domain == ASAuthorizationError.errorDomain,
+       nsError.code == ASAuthorizationError.canceled.rawValue {
+      return CancellationError()
+    }
+    return AuthServiceError.signInFailed(underlying: error)
   }
 
   @MainActor public func createAuthCredential() async throws -> AuthCredential {
