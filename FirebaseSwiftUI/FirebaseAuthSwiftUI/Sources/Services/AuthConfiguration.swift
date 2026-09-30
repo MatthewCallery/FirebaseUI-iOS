@@ -16,6 +16,13 @@ import FirebaseAuth
 import Foundation
 import SwiftUI
 
+/// The built-in authentication flow that reported an error.
+public enum AuthErrorOperation: Sendable, Equatable {
+  case authentication
+  case passwordReset
+  case accountLinking
+}
+
 public struct AuthConfiguration {
   public let logo: ImageResource?
   public let languageCode: String?
@@ -28,6 +35,11 @@ public struct AuthConfiguration {
   public let privacyPolicyUrl: URL?
   public let emailLinkSignInActionCodeSettings: ActionCodeSettings?
   public let verifyEmailActionCodeSettings: ActionCodeSettings?
+
+  /// Observes errors handled by the built-in views without replacing their UI.
+  /// The callback runs on the main actor and may receive expected failures or cancellation.
+  /// Filter and sanitize errors before forwarding them to a diagnostics service.
+  public let onError: (@MainActor (Error, AuthErrorOperation) -> Void)?
 
   // MARK: - MFA Configuration
 
@@ -48,7 +60,8 @@ public struct AuthConfiguration {
               verifyEmailActionCodeSettings: ActionCodeSettings? = nil,
               mfaEnabled: Bool = false,
               allowedSecondFactors: Set<SecondFactorType> = [.sms, .totp],
-              mfaIssuer: String = "Firebase Auth") {
+              mfaIssuer: String = "Firebase Auth",
+              onError: (@MainActor (Error, AuthErrorOperation) -> Void)? = nil) {
     self.logo = logo
     self.shouldHideCancelButton = shouldHideCancelButton
     self.interactiveDismissEnabled = interactiveDismissEnabled
@@ -63,5 +76,22 @@ public struct AuthConfiguration {
     self.mfaEnabled = mfaEnabled
     self.allowedSecondFactors = allowedSecondFactors
     self.mfaIssuer = mfaIssuer
+    self.onError = onError
+  }
+}
+
+extension AuthConfiguration {
+  @MainActor
+  func reportError(_ error: Error, operation: AuthErrorOperation) {
+    // Reauthentication reports its original failure before cancelling the pending link.
+    if operation == .accountLinking {
+      if error is CancellationError {
+        return
+      }
+      if case .signInCancelled = error as? AuthServiceError {
+        return
+      }
+    }
+    onError?(error, operation)
   }
 }

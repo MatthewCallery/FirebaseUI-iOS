@@ -31,7 +31,7 @@ public struct PasswordRecoveryView {
       sentEmail = email
       showSuccessSheet = true
     } catch {
-      // Error already displayed via modal by AuthService
+      authService.configuration.reportError(error, operation: .passwordReset)
     }
   }
 }
