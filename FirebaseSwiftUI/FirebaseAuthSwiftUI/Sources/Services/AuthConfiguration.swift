@@ -83,15 +83,6 @@ public struct AuthConfiguration {
 extension AuthConfiguration {
   @MainActor
   func reportError(_ error: Error, operation: AuthErrorOperation) {
-    // Reauthentication reports its original failure before cancelling the pending link.
-    if operation == .accountLinking {
-      if error is CancellationError {
-        return
-      }
-      if case .signInCancelled = error as? AuthServiceError {
-        return
-      }
-    }
     onError?(error, operation)
   }
 }

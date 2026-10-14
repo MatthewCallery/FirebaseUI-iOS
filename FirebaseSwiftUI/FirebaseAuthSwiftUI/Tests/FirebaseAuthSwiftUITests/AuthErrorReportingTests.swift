@@ -36,35 +36,79 @@ struct AuthErrorReportingTests {
     #expect(reportedOperations == [operation])
   }
 
-  @Test
-  func cancellationIsAvailableForTheConsumerToFilter() {
+  @Test(arguments: [AuthErrorOperation.authentication, .passwordReset, .accountLinking])
+  func cancellationIsAvailableForTheConsumerToFilter(operation: AuthErrorOperation) {
     var receivedCancellation = false
     let configuration = AuthConfiguration(onError: { error, _ in
       receivedCancellation = error is CancellationError
     })
 
-    configuration.reportError(CancellationError(), operation: .authentication)
+    configuration.reportError(CancellationError(), operation: operation)
 
     #expect(receivedCancellation)
   }
 
-  @Test
-  func reauthenticationFailureIsNotReportedAgainWhenPendingLinkIsCancelled() {
-    let failure = NSError(domain: "TestProvider", code: 42)
+  @Test(arguments: [AuthErrorOperation.authentication, .accountLinking])
+  func oauthReauthenticationFailureIsReportedOnce(operation: AuthErrorOperation) async {
+    let failure = NSError(domain: "TestOAuthProvider", code: 42, userInfo: [
+      NSLocalizedDescriptionKey: "OAuth provider unavailable",
+      "providerDetail": "Synthetic retry detail",
+    ])
+    let coordinator = ReauthenticationCoordinator()
     var reportedErrors: [NSError] = []
-    let configuration = AuthConfiguration(onError: { error, _ in
+    var reportedOperations: [AuthErrorOperation] = []
+    let configuration = AuthConfiguration(onError: { error, operation in
       reportedErrors.append(error as NSError)
+      reportedOperations.append(operation)
     })
 
-    configuration.reportError(failure, operation: .authentication)
-    configuration.reportError(
-      AuthServiceError.signInCancelled("Reauthentication cancelled"),
-      operation: .accountLinking
-    )
-    configuration.reportError(CancellationError(), operation: .accountLinking)
+    // This task runs on the main actor after requestReauth suspends below.
+    let providerFailure = Task { @MainActor in
+      #expect(coordinator.isReauthenticating)
+      coordinator.reauthFailed(with: failure)
+      // A late duplicate completion must not resume or report the request again.
+      coordinator.reauthFailed(with: failure)
+    }
+    do {
+      try await coordinator.requestReauth(context: .oauth(
+        OAuthReauthContext(providerId: "test.oauth", providerName: "Test OAuth")
+      ))
+      Issue.record("Failed reauthentication must not resume the operation successfully")
+    } catch {
+      configuration.reportError(error, operation: operation)
+    }
+    await providerFailure.value
 
     #expect(reportedErrors.count == 1)
-    #expect(reportedErrors.first === failure)
+    #expect(reportedErrors.first?.domain == failure.domain)
+    #expect(reportedErrors.first?.code == failure.code)
+    #expect(reportedErrors.first?.userInfo as NSDictionary? == failure.userInfo as NSDictionary)
+    #expect(reportedOperations == [operation])
+    #expect(!coordinator.isReauthenticating)
+    #expect(coordinator.reauthContext == nil)
+  }
+
+  @Test
+  func explicitReauthenticationCancellationRemainsCancellation() async {
+    let coordinator = ReauthenticationCoordinator()
+    let cancellation = Task { @MainActor in
+      #expect(coordinator.isReauthenticating)
+      coordinator.reauthCancelled()
+    }
+    do {
+      try await coordinator.requestReauth(context: .oauth(
+        OAuthReauthContext(providerId: "test.oauth", providerName: "Test OAuth")
+      ))
+      Issue.record("Cancelling reauthentication must not resume the operation successfully")
+    } catch {
+      guard case .signInCancelled = error as? AuthServiceError else {
+        Issue.record("Expected signInCancelled, received \(error)")
+        return
+      }
+    }
+    await cancellation.value
+    #expect(!coordinator.isReauthenticating)
+    #expect(coordinator.reauthContext == nil)
   }
 
   @Test

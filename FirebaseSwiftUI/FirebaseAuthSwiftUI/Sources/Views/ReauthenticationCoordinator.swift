@@ -70,6 +70,12 @@ public final class ReauthenticationCoordinator {
     cleanup()
   }
 
+  /// Propagates a failed reauthentication to the pending operation for error reporting.
+  func reauthFailed(with error: Error) {
+    continuation?.resume(throwing: error)
+    cleanup()
+  }
+
   /// Called when reauthentication is cancelled
   public func reauthCancelled() {
     continuation?.resume(throwing: AuthServiceError.signInCancelled("Reauthentication cancelled"))
