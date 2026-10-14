@@ -136,13 +136,17 @@ extension EmailAuthView: View {
         ] : [],
         maintainsValidationMessage: authService.authenticationFlow == .signUp,
         onSubmit: { _ in
-          Task { try await signInWithEmailPassword() }
+          if authService.authenticationFlow == .signUp {
+            focus = .confirmPassword
+          } else {
+            Task { try await signInWithEmailPassword() }
+          }
         },
         leading: {
           Image(systemName: "lock")
         }
       )
-      .submitLabel(.go)
+      .submitLabel(authService.authenticationFlow == .signUp ? .next : .go)
       .focused($focus, equals: .password)
       .accessibilityIdentifier("password-field")
       if authService.authenticationFlow == .signIn {
