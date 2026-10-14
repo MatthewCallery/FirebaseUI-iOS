@@ -29,10 +29,23 @@ import FirebasePhoneAuthSwiftUI
 import FirebaseTwitterSwiftUI
 import SwiftUI
 
+@Observable
+private final class AuthErrorObservation {
+  var count = 0
+  var receivedExpectedError = false
+}
+
 struct TestView: View {
-  let authService: AuthService
+  @State private var authService: AuthService
+  @State private var errorObservation: AuthErrorObservation
+  private let updatePasswordErrorEnabled: Bool
 
   init() {
+    let errorObservation = AuthErrorObservation()
+    _errorObservation = State(initialValue: errorObservation)
+    updatePasswordErrorEnabled = ProcessInfo.processInfo.arguments.contains(
+      "--update-password-error"
+    )
     Auth.auth().useEmulator(withHost: "localhost", port: 9099)
     Task {
       try signOut()
@@ -60,10 +73,18 @@ struct TestView: View {
       tosUrl: URL(string: "https://example.com/tos"),
       privacyPolicyUrl: URL(string: "https://example.com/privacy"),
       emailLinkSignInActionCodeSettings: actionCodeSettings,
-      mfaEnabled: isMfaEnabled
+      mfaEnabled: isMfaEnabled,
+      onError: { error, operation in
+        errorObservation.count += 1
+        errorObservation.receivedExpectedError = false
+        if case .noCurrentUser = error as? AuthServiceError, operation == .authentication {
+          errorObservation.receivedExpectedError = true
+        }
+      }
     )
 
     let args = ProcessInfo.processInfo.arguments
+    let authService: AuthService
 
     // Configure providers based on launch arguments
     if args.contains("--no-providers") {
@@ -98,12 +119,22 @@ struct TestView: View {
         ]
       )
     }
+    if updatePasswordErrorEnabled {
+      // Exercise the real update view with a deterministic signed-out failure.
+      authService.navigator.push(.updatePassword)
+    }
     authService.isPresented = true
+    _authService = State(initialValue: authService)
   }
 
   var body: some View {
     AuthPickerView {
-      Text("Hello, world!")
+      if updatePasswordErrorEnabled {
+        Text(verbatim: "\(errorObservation.count):\(errorObservation.receivedExpectedError)")
+          .accessibilityIdentifier("observed-auth-error")
+      } else {
+        Text("Hello, world!")
+      }
     }
     .environment(authService)
   }

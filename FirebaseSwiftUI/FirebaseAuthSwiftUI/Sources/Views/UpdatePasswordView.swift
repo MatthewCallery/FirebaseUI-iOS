@@ -52,7 +52,9 @@ public struct UpdatePasswordView {
           try await authService.updatePassword(to: confirmPassword)
         }
         showAlert = true
-      } catch {}
+      } catch {
+        authService.configuration.reportError(error, operation: .authentication)
+      }
     }
   }
 }
@@ -76,6 +78,7 @@ extension UpdatePasswordView: View {
       )
       .submitLabel(.go)
       .focused($focus, equals: .password)
+      .accessibilityIdentifier("new-password-field")
 
       AuthTextField(
         text: $confirmPassword,
@@ -93,6 +96,7 @@ extension UpdatePasswordView: View {
       )
       .submitLabel(.go)
       .focused($focus, equals: .confirmPassword)
+      .accessibilityIdentifier("confirm-new-password-field")
 
       Button(action: {
         updatePassword()
@@ -105,6 +109,7 @@ extension UpdatePasswordView: View {
       .padding([.top, .bottom], 8)
       .frame(maxWidth: .infinity)
       .buttonStyle(.borderedProminent)
+      .accessibilityIdentifier("update-password-button")
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .safeAreaPadding()

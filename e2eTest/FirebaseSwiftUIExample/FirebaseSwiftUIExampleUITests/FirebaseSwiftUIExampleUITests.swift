@@ -266,6 +266,40 @@ final class FirebaseSwiftUIExampleUITests: XCTestCase {
   }
 
   @MainActor
+  func testUpdatePasswordFailureReachesErrorObserver() throws {
+    let app = createTestApp()
+    app.launchArguments.append("--update-password-error")
+    app.launch()
+
+    let password = app.secureTextFields["new-password-field"]
+    XCTAssertTrue(password.waitForExistence(timeout: 6))
+    try enterText("NewPassword321!", into: password, app: app)
+    try enterText(
+      "NewPassword321!",
+      into: app.secureTextFields["confirm-new-password-field"],
+      app: app
+    )
+    let update = app.buttons["update-password-button"]
+    XCTAssertTrue(waitForElementToBecomeEnabled(update))
+    update.tap()
+
+    XCTAssertFalse(app.alerts.firstMatch.waitForExistence(timeout: 2))
+    XCTAssertTrue(update.exists, "A failed update must keep the update form visible")
+    XCTAssertEqual(app.textFields["new-password-field"].value as? String, "NewPassword321!")
+
+    // Return to the picker, then close it to inspect the consumer's observation.
+    app.navigationBars.buttons.element(boundBy: 0).tap()
+    app.navigationBars.buttons.element(boundBy: 0).tap()
+    let observation = app.staticTexts["observed-auth-error"]
+    XCTAssertTrue(observation.waitForExistence(timeout: 5))
+    XCTAssertEqual(
+      observation.label,
+      "1:true",
+      "Report noCurrentUser as authentication exactly once"
+    )
+  }
+
+  @MainActor
   func testSignUpPasswordReturnFocusesConfirmationWhenObscured() async throws {
     try await assertSignUpPasswordReturnFocusesConfirmation(obscured: true)
   }

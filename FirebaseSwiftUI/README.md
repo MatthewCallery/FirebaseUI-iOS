@@ -243,7 +243,8 @@ main actor. The callback leaves existing alerts and recovery behavior unchanged,
 including failures that password recovery or automatic account linking otherwise
 handle silently. OAuth reauthentication failures are reported before recovery is
 cancelled. Applications that call `AuthService` methods directly should handle
-those thrown errors themselves.
+those thrown errors themselves. Signed-in password updates report failures under
+`authentication`, including failures from a retry after reauthentication.
 
 The callback can receive cancellations and other expected failures; filter them
 before recording diagnostics. Error descriptions, associated values, and
