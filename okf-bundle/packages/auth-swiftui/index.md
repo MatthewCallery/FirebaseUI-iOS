@@ -39,6 +39,7 @@ Allowlist: [agent command policy](../../testing/agent-command-policy.md). Detail
 * Version stamp for Swift releases: `FirebaseSwiftUI/FirebaseAuthSwiftUI/Sources/Version.swift` via [`release-swift.sh`](../../../release-swift.sh) (human release process).
 * Feature parity with FirebaseUI-Android Auth UI where applicable ([`CONTRIBUTING.md`](../../../CONTRIBUTING.md)).
 * Emulator-backed tests use project `flutterfire-e2e-tests` by default.
+* `AuthConfiguration.onError` observes built-in view failures without replacing their UI. Callback scope, operation contexts, and sanitization guidance are owned by [the Auth UI error-handling documentation](../../../FirebaseSwiftUI/README.md#3-error-handling).
 
 ## Related
 

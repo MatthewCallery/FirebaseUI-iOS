@@ -102,7 +102,8 @@ struct AccountConflictModifier: ViewModifier {
         // Successfully linked, clear the pending credential
         pendingCredentialForLinking = nil
       } catch {
-        // Silently swallow linking errors - user is already signed in
+        // Keep the signed-in user in place while allowing diagnostics to observe the failure.
+        authService.configuration.reportError(error, operation: .accountLinking)
         pendingCredentialForLinking = nil
       }
     }

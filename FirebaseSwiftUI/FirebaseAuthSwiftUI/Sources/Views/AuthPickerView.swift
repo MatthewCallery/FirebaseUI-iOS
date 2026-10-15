@@ -88,6 +88,7 @@ extension AuthPickerView: View {
 
   /// Closure for reporting errors from child views
   private func reportError(_ error: Error) {
+    authService.configuration.reportError(error, operation: .authentication)
     Task { @MainActor in
       self.error = AlertError(
         message: authService.string.localizedErrorMessage(for: error),

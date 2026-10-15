@@ -108,7 +108,7 @@ struct ReauthenticationModifier: ViewModifier {
         try await authService.reauthenticate(context: context)
         coordinator.reauthCompleted()
       } catch {
-        coordinator.reauthCancelled()
+        coordinator.reauthFailed(with: error)
       }
     }
   }

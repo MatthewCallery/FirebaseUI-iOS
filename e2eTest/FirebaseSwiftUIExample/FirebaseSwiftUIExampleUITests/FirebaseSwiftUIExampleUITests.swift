@@ -266,6 +266,97 @@ final class FirebaseSwiftUIExampleUITests: XCTestCase {
   }
 
   @MainActor
+  func testUpdatePasswordFailureReachesErrorObserver() throws {
+    let app = createTestApp()
+    app.launchArguments.append("--update-password-error")
+    app.launch()
+
+    let password = app.secureTextFields["new-password-field"]
+    XCTAssertTrue(password.waitForExistence(timeout: 6))
+    try enterText("NewPassword321!", into: password, app: app)
+    try enterText(
+      "NewPassword321!",
+      into: app.secureTextFields["confirm-new-password-field"],
+      app: app
+    )
+    let update = app.buttons["update-password-button"]
+    XCTAssertTrue(waitForElementToBecomeEnabled(update))
+    update.tap()
+
+    XCTAssertFalse(app.alerts.firstMatch.waitForExistence(timeout: 2))
+    XCTAssertTrue(update.exists, "A failed update must keep the update form visible")
+    XCTAssertEqual(app.textFields["new-password-field"].value as? String, "NewPassword321!")
+
+    // Return to the picker, then close it to inspect the consumer's observation.
+    app.navigationBars.buttons.element(boundBy: 0).tap()
+    app.navigationBars.buttons.element(boundBy: 0).tap()
+    let observation = app.staticTexts["observed-auth-error"]
+    XCTAssertTrue(observation.waitForExistence(timeout: 5))
+    XCTAssertEqual(
+      observation.label,
+      "1:true",
+      "Report noCurrentUser as authentication exactly once"
+    )
+  }
+
+  @MainActor
+  func testSignUpPasswordReturnFocusesConfirmationWhenObscured() async throws {
+    try await assertSignUpPasswordReturnFocusesConfirmation(obscured: true)
+  }
+
+  @MainActor
+  func testSignUpPasswordReturnFocusesConfirmationWhenRevealed() async throws {
+    try await assertSignUpPasswordReturnFocusesConfirmation(obscured: false)
+  }
+
+  @MainActor
+  private func assertSignUpPasswordReturnFocusesConfirmation(obscured: Bool) async throws {
+    let email = createEmail()
+    let password = "QaReturn321!"
+    // An existing emulator user makes an accidental sign-in observable.
+    try await createTestUser(email: email, password: password)
+    let app = createTestApp()
+    app.launch()
+
+    let switchFlow = app.buttons["switch-auth-flow"]
+    XCTAssertTrue(switchFlow.waitForExistence(timeout: 6))
+    switchFlow.tap()
+    try enterText(email, into: app.textFields["email-field"], app: app)
+    try enterText(password, into: app.secureTextFields["password-field"], app: app)
+    if obscured {
+      app.buttons["password-field"].tap()
+      app.secureTextFields["password-field"].tap()
+    }
+
+    let signUp = app.buttons["sign-in-button"]
+    XCTAssertFalse(signUp.isEnabled, "Confirmation is still required")
+    let next = app.keyboards.buttons.matching(
+      NSPredicate(format: "label ==[c] %@", "Next")
+    ).firstMatch
+    XCTAssertTrue(next.waitForExistence(timeout: 5), "Sign-up Password should show Next")
+    next.tap()
+    XCTAssertFalse(signUp.isEnabled, "Moving focus must not complete the form")
+
+    // Do not tap Confirm Password: typing must go to the field focused by Return.
+    app.typeText(password)
+    let revealConfirmation = app.buttons["confirm-password-field"]
+    XCTAssertTrue(
+      revealConfirmation.waitForExistence(timeout: 5),
+      "Return should focus Confirm Password so it receives subsequent typing"
+    )
+    revealConfirmation.tap()
+    XCTAssertEqual(app.textFields["confirm-password-field"].value as? String, password)
+    if obscured {
+      app.buttons["password-field"].tap()
+    }
+    XCTAssertEqual(app.textFields["password-field"].value as? String, password)
+    XCTAssertTrue(waitForElementToBecomeEnabled(signUp, timeout: 5))
+    XCTAssertFalse(app.alerts.firstMatch.waitForExistence(timeout: 2))
+    XCTAssertFalse(app.staticTexts["signed-in-text"].exists)
+    XCTAssertTrue(switchFlow.exists, "The user should remain on the sign-up form")
+  }
+
+  @MainActor
   func testDuplicateEmailSignupDisplaysError() async throws {
     let email = createEmail()
     let password = "qwerty321@"

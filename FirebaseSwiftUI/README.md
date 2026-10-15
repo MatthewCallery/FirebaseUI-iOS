@@ -236,6 +236,21 @@ The default views include built-in error handling:
 - Uses localized error messages via `StringUtils`
 - Errors are propagated through the `reportError` environment key
 
+Applications can observe errors from the built-in views with the optional
+`AuthConfiguration(onError:)` callback. It receives the original `Error` and an
+`AuthErrorOperation` (`authentication`, `passwordReset`, or `accountLinking`) on the
+main actor. The callback leaves existing alerts and recovery behavior unchanged,
+including failures that password recovery or automatic account linking otherwise
+handle silently. OAuth reauthentication failures propagate to the interrupted
+operation and are reported once with its operation context. Applications that call
+`AuthService` methods directly should handle those thrown errors themselves. Signed-in password updates report failures under
+`authentication`, including failures from a retry after reauthentication.
+
+The callback can receive cancellations and other expected failures; filter them
+before recording diagnostics. Error descriptions, associated values, and
+`NSError.userInfo` may contain personal information or credentials and should not
+be uploaded without sanitization.
+
 #### 4. **Email Link Sign-In**
 
 When email link sign-in is configured:
