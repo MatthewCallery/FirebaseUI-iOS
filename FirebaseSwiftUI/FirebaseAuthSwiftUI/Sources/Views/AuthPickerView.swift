@@ -68,6 +68,7 @@ extension AuthPickerView: View {
               }
             }
         }
+        .modifier(AuthPickerSheetSizing())
         .errorAlert(
           error: $error,
           okButtonLabel: authService.string.okButtonLabel
@@ -146,11 +147,11 @@ extension AuthPickerView: View {
             .resizable()
             .aspectRatio(contentMode: .fit)
             .frame(width: 100, height: 100)
+          otherSignInOptions(proxy)
+          Divider()
           if authService.emailPasswordSignInEnabled {
             EmailAuthView()
           }
-          Divider()
-          otherSignInOptions(proxy)
           PrivacyTOCsView(displayMode: .full)
         }
       }
@@ -163,6 +164,27 @@ extension AuthPickerView: View {
       authService.renderButtons()
     }
     .padding(.horizontal, proxy.size.width * 0.14)
+  }
+}
+
+private struct AuthPickerSheetSizing: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(iOS 18.0, *),
+       UIDevice.current.userInterfaceIdiom == .pad || UIDevice.current.userInterfaceIdiom == .mac {
+      content.presentationSizing(AuthPickerPresentationSizing())
+    } else {
+      content
+    }
+  }
+}
+
+@available(iOS 18.0, *)
+private struct AuthPickerPresentationSizing: PresentationSizing {
+  func proposedSize(for root: PresentationSizingRoot,
+                    context: PresentationSizingContext) -> ProposedViewSize {
+    let form = FormPresentationSizing.form.proposedSize(for: root, context: context)
+    let page = PagePresentationSizing.page.proposedSize(for: root, context: context)
+    return ProposedViewSize(width: form.width, height: page.height)
   }
 }
 
