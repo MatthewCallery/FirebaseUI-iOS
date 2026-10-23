@@ -171,10 +171,20 @@ private struct AuthPickerSheetSizing: ViewModifier {
   func body(content: Content) -> some View {
     if #available(iOS 18.0, *),
        UIDevice.current.userInterfaceIdiom == .pad || UIDevice.current.userInterfaceIdiom == .mac {
-      content.presentationSizing(.page)
+      content.presentationSizing(AuthPickerPresentationSizing())
     } else {
       content
     }
+  }
+}
+
+@available(iOS 18.0, *)
+private struct AuthPickerPresentationSizing: PresentationSizing {
+  func proposedSize(for root: PresentationSizingRoot,
+                    context: PresentationSizingContext) -> ProposedViewSize {
+    let form = FormPresentationSizing.form.proposedSize(for: root, context: context)
+    let page = PagePresentationSizing.page.proposedSize(for: root, context: context)
+    return ProposedViewSize(width: form.width, height: page.height)
   }
 }
 
