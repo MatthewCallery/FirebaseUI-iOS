@@ -68,6 +68,7 @@ extension AuthPickerView: View {
               }
             }
         }
+        .modifier(AuthPickerSheetSizing())
         .errorAlert(
           error: $error,
           okButtonLabel: authService.string.okButtonLabel
@@ -163,6 +164,17 @@ extension AuthPickerView: View {
       authService.renderButtons()
     }
     .padding(.horizontal, proxy.size.width * 0.14)
+  }
+}
+
+private struct AuthPickerSheetSizing: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(iOS 18.0, *),
+       UIDevice.current.userInterfaceIdiom == .pad || UIDevice.current.userInterfaceIdiom == .mac {
+      content.presentationSizing(.page)
+    } else {
+      content
+    }
   }
 }
 
